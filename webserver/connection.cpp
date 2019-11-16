@@ -22,6 +22,10 @@ namespace http {
 		extern std::string convert_to_http_date(time_t time);
 		extern time_t last_write_time(const std::string& path);
 
+		// CppCon 2017: Fedor Pikus “C++ atomics, from basic to advanced. What do they really do?”
+		// https://www.youtube.com/watch?v=ZQFzMfHIxng	
+		std::atomic_int connection::connection_object_count{0};
+
 		// this is the constructor for plain connections
 		connection::connection(boost::asio::io_service& io_service,
 			connection_manager& manager,
@@ -38,6 +42,8 @@ namespace http {
 			default_max_requests_(20),
 			send_buffer_(NULL)
 		{
+			connection_object_count++;
+			_log.Log(LOG_STATUS, "In connection::connection, number of connection objects will be very close to: %d", connection_object_count.load());
 			secure_ = false;
 			keepalive_ = false;
 			write_in_progress = false;
@@ -63,6 +69,8 @@ namespace http {
 			default_max_requests_(20),
 			send_buffer_(NULL)
 		{
+			connection_object_count++;
+			_log.Log(LOG_STATUS, "In connection::connection, number of connection objects will be very close to: %d", connection_object_count.load());
 			secure_ = true;
 			keepalive_ = false;
 			write_in_progress = false;
@@ -518,6 +526,8 @@ namespace http {
 
 		connection::~connection()
 		{
+			connection_object_count--;
+			_log.Log(LOG_STATUS, "In connection::~connection, number of connection objects will be very close to: %d", connection_object_count.load());
 			// free up resources, delete the socket pointers
 			if (socket_) delete socket_;
 #ifdef WWW_ENABLE_SSL
@@ -566,11 +576,13 @@ namespace http {
 
 		/// schedule abandoned timeout timer
 		void connection::set_abandoned_timeout() {
+			#if 0
 			if (connection_type == connection_websocket)
 				return; //disabled for now
 
 			abandoned_timer_.expires_from_now(boost::posix_time::seconds(default_abandoned_timeout_));
 			abandoned_timer_.async_wait(boost::bind(&connection::handle_abandoned_timeout, shared_from_this(), boost::asio::placeholders::error));
+			#endif
 		}
 
 		/// simply cancel abandoned timeout timer

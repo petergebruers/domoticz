@@ -70,6 +70,8 @@ namespace http {
 			void handle_read_timeout(const boost::system::error_code& error);
 			void handle_abandoned_timeout(const boost::system::error_code& error);
 
+			static std::atomic_int connection_object_count;
+
 		private:
 			/// Handle completion of a read operation.
 			void handle_read(const boost::system::error_code& e, std::size_t bytes_transferred);
